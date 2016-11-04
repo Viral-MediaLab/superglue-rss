@@ -37,7 +37,7 @@ def get_segments_by_channel (channel):
                 'description':segment['text'],
                 'pubDate':media['date_added'],
                 'guid': '%s_%d'%(media['_id'],i),
-                'segment:duration': segment['start']-segment['end'],
+                'segment:duration': segment['end']/1000.0-segment['start']/1000.0,
                 'enclosure': segment['thumbnail_image'] if 'thumbnail_image' in segment else ''
                 })
     return segments
