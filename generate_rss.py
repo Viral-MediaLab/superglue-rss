@@ -26,7 +26,6 @@ def get_segments_by_channel (channel):
         "is_news":{"$eq": True},
         "channel": {"$eq":channel}},
         sort=[('date_added', pymongo.DESCENDING)], limit=videos_limit)
-    print media_with_segments.count()
     segments = []
     for media in media_with_segments:
         for i, segment in enumerate(media['story_segments']):
@@ -43,20 +42,24 @@ def get_segments_by_channel (channel):
     return segments
 
 def generate_rss_feed (channel):
-    segments = get_segments_by_channel(channel)
     channel_data = get_channel_data(channel)
-    fg = FeedGenerator()
-    fg.title(channel_data['name'])
-    fg.link(href=channel_data['link'])
-    fg.description(channel_data['description'])
+    if channel_data:
+        segments = get_segments_by_channel(channel)
+        fg = FeedGenerator()
+        fg.title(channel_data['name'])
+        fg.link(href=channel_data['link'])
+        fg.description(channel_data['description'])
 
-    for segment in segments:
-        fe = fg.add_entry()
-        fe.guid(segment['guid'])
-        fe.title(segment['title'])
-        fe.description(segment['description'])
-        fe.enclosure(segment['enclosure'], 0, 'image/jpeg')
-        fe.link(href=segment['link'])
-        fe.pubdate(datetime.datetime.fromtimestamp(segment['pubDate']/1000.0, pytz.utc))
+        for segment in segments:
+            fe = fg.add_entry()
+            fe.guid(segment['guid'])
+            fe.title(segment['title'])
+            fe.description(segment['description'])
+            fe.enclosure(segment['enclosure'], 0, 'image/jpeg')
+            fe.link(href=segment['link'])
+            fe.pubdate(datetime.datetime.fromtimestamp(segment['pubDate']/1000.0, pytz.utc))
 
-    return fg.rss_str(pretty=True)
+        return fg.rss_str(pretty=True)
+    else:
+        # channel was not found
+        return "<title>error: channel not found</title>"
