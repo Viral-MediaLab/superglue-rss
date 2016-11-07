@@ -5,6 +5,7 @@ import pytz
 from feedgen.feed import FeedGenerator
 from pymongo import MongoClient
 from channels import get_channel_data
+from segment_extension import SegmentExtension, SegmentEntryExtension
 
 DAY = 86400000
 HOUR = 3600000
@@ -50,6 +51,8 @@ def generate_rss_feed (channel):
         fg.link(href=channel_data['link'])
         fg.description(channel_data['description'])
 
+        fg.register_extension('segment', SegmentExtension, SegmentEntryExtension)
+
         for segment in segments:
             fe = fg.add_entry()
             fe.guid(segment['guid'])
@@ -58,6 +61,7 @@ def generate_rss_feed (channel):
             fe.enclosure(segment['enclosure'], 0, 'image/jpeg')
             fe.link(href=segment['link'])
             fe.pubdate(datetime.datetime.fromtimestamp(segment['pubDate']/1000.0, pytz.utc))
+            fe.segment.duration(str(segment['segment:duration']))
 
         return fg.rss_str(pretty=True)
     else:
