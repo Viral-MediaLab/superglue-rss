@@ -17,20 +17,29 @@ def millis_since(num_days=2):
     return millis() - num_days*DAY
 
 
-def get_segments_by_channel (channel):
+def get_segments_by_channel (channel, since_time=10):
     MONGO_URL = 'mongodb://um.media.mit.edu:27017/super-glue'
     collection = MongoClient(MONGO_URL).get_default_database()['media']
     videos_limit = 100
-    media_with_segments = collection.find({
-        "date_added":{"$gt":millis_since(10)},
+    pipe = {
         "story_segments":{"$exists": True},
         "is_news":{"$eq": True},
-        "channel": {"$eq":channel}},
-        sort=[('date_added', pymongo.DESCENDING)], limit=videos_limit)
+        "channel": {"$eq":channel}}
+    if since_time>0:
+        pipe["date_added"] = {"$gt":millis_since(since_time)}
+        limit = videos_limit
+        media_with_segments = collection.find(
+            pipe,
+            sort=[('date_added', pymongo.DESCENDING)],
+            limit=videos_limit)
+    else:
+        media_with_segments = collection.find(
+            pipe,
+            sort=[('date_added', pymongo.DESCENDING)])
     segments = []
     for media in media_with_segments:
         for i, segment in enumerate(media['story_segments']):
-            if len(segment['text'])>TEXT_LENGHT_THRESHOLD:
+            if 'text' in segment and len(segment['text'])>TEXT_LENGHT_THRESHOLD:
                 segments.append({
                 'title':media['title'],
                 'link': "%s#t=%.2f,%.2f"%(media['media_url_no_comm'],segment['start']/1000.0,segment['end']/1000.0),
@@ -42,10 +51,10 @@ def get_segments_by_channel (channel):
                 })
     return segments
 
-def generate_rss_feed (channel):
+def generate_rss_feed (channel, since_time=10):
     channel_data = get_channel_data(channel)
     if channel_data:
-        segments = get_segments_by_channel(channel)
+        segments = get_segments_by_channel(channel, since_time)
         fg = FeedGenerator()
         fg.title(channel_data['name'])
         fg.link(href=channel_data['link'])
